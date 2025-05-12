@@ -43,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fi">
       <body
         className={`${abcdDiatype.variable} ${reckless.variable} antialiased`}
       >

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       model: anthropic('claude-3-5-sonnet-20241022'),
       schema: summarySchema,
       output: 'object',
-      system: "All the output content should be in simple english. Don't use any difficult words. Keep sentences short and simple.  Use unique emojis for each heading.",
+      system: "All the output content should be in simple finnish. Don't use any difficult words. Keep sentences short and simple.  Use unique emojis for each heading.",
       prompt: `You are an expert at writing important points about a company.
       Here are the content from a company's website so you can understand about the company in detail.
       

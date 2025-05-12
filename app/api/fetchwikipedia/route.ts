@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
     
     const result = await exa.searchAndContents(
-      `${websiteurl} company wikipedia page:`,
+      `${websiteurl} yrityksen wikipedia sivu:`,
       {
         type: "keyword",
         livecrawl: "always",
