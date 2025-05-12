@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import CompanyMindMap from './mindmap/CompanyMindMap';
-import CompanySummary from './companycontent/CompanySummar';
+import CompanySummary from './companycontent/CompanySummary';
 import LinkedInDisplay from './linkedin/LinkedinDisplay';
 import GitHubDisplay from './github/GitHubDisplay';
 import TwitterProfileDisplay from './twitter/TwitterProfileDisplay';
@@ -29,24 +29,41 @@ export default function CompanyResearcher() {
   const [comparisonUrl, setComparisonUrl] = useState('');
   const [isComparing, setIsComparing] = useState(false);
 
+  // Function to validate and format URL
+  const formatUrl = (input: string): string => {
+    let formattedUrl = input.trim().toLowerCase();
+    
+    // Remove common prefixes if they exist
+    formattedUrl = formattedUrl.replace(/^(https?:\/\/)?(www\.)?/, '');
+    
+    // Add https:// prefix if not present
+    if (!formattedUrl.startsWith('http')) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+    
+    return formattedUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    const formattedUrl = formatUrl(url);
 
     try {
       // Fetch website content
       const websiteContent = await fetch('/api/scrapewebsiteurl', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ websiteurl: url })
+        body: JSON.stringify({ websiteurl: formattedUrl })
       }).then(res => res.json());
 
       // Fetch subpages
       const subpagesContent = await fetch('/api/scrapewebsitesubpages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ websiteurl: url })
+        body: JSON.stringify({ websiteurl: formattedUrl })
       }).then(res => res.json());
 
       // Generate company summary
@@ -54,7 +71,7 @@ export default function CompanyResearcher() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          websiteurl: url,
+          websiteurl: formattedUrl,
           mainpage: websiteContent.results[0],
           subpages: subpagesContent.results[0]
         })
@@ -65,7 +82,7 @@ export default function CompanyResearcher() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          websiteurl: url,
+          websiteurl: formattedUrl,
           mainpage: websiteContent.results[0]
         })
       }).then(res => res.json());
@@ -76,22 +93,22 @@ export default function CompanyResearcher() {
         news, competitors, wikipedia, financials, funding, founders,
         crunchbase, pitchbook, tracxn
       ] = await Promise.all([
-        fetch('/api/scrapelinkedin', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchgithuburl', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/scrapelinkedin', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchgithuburl', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/scraperecenttweets', { method: 'POST', body: JSON.stringify({ username: websiteContent.results[0]?.twitter_username }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/scrapetwitterprofile', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchyoutubevideos', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchtiktok', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/scrapereddit', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/findnews', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/findcompetitors', { method: 'POST', body: JSON.stringify({ websiteurl: url, summaryText: summary.result }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchwikipedia', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchfinancialreport', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchfunding', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchfounders', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchcrunchbase', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchpitchbook', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchtracxn', { method: 'POST', body: JSON.stringify({ websiteurl: url }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json())
+        fetch('/api/scrapetwitterprofile', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchyoutubevideos', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchtiktok', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/scrapereddit', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/findnews', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/findcompetitors', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl, summaryText: summary.result }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchwikipedia', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchfinancialreport', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchfunding', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchfounders', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchcrunchbase', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchpitchbook', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchtracxn', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json())
       ]);
 
       setResearchData({
@@ -150,10 +167,10 @@ export default function CompanyResearcher() {
       <main className="w-full max-w-7xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-            Yritysten tutkimus helpommaksi
+            Suomalaisten yritysten tutkimus
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Syötä yrityksen verkko-osoite saadaksesi kattavan analyysin sen tuotteista, rahoituksesta ja tiimistä.
+            Syötä yrityksen verkko-osoite tai Y-tunnus saadaksesi kattavan analyysin.
           </p>
         </div>
 
@@ -163,10 +180,10 @@ export default function CompanyResearcher() {
               <Search className="h-5 w-5 text-gray-400" />
             </div>
             <input
-              type="url"
+              type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="Syötä yrityksen verkko-osoite (esim. google.com)"
+              placeholder="Syötä yrityksen verkko-osoite tai Y-tunnus (esim. firma.fi tai 1234567-8)"
               className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl bg-white 
                        shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-default focus:border-transparent
                        placeholder:text-gray-400 text-gray-900"
@@ -180,10 +197,10 @@ export default function CompanyResearcher() {
                 <Search className="h-5 w-5 text-gray-400" />
               </div>
               <input
-                type="url"
+                type="text"
                 value={comparisonUrl}
                 onChange={(e) => setComparisonUrl(e.target.value)}
-                placeholder="Syötä kilpailijan verkko-osoite vertailua varten"
+                placeholder="Syötä kilpailijan verkko-osoite tai Y-tunnus vertailua varten"
                 className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl bg-white 
                          shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-default focus:border-transparent
                          placeholder:text-gray-400 text-gray-900"
@@ -344,15 +361,15 @@ export default function CompanyResearcher() {
               {[
                 {
                   title: 'Kattava analyysi',
-                  description: 'Saat yksityiskohtaista tietoa yrityksen tuotteista, rahoituksesta ja markkina-asemasta.'
+                  description: 'Saat yksityiskohtaista tietoa suomalaisten yritysten tuotteista, rahoituksesta ja markkina-asemasta.'
                 },
                 {
                   title: 'Reaaliaikainen data',
-                  description: 'Pääsy ajantasaisiin tietoihin useista luotettavista lähteistä.'
+                  description: 'Pääsy ajantasaisiin tietoihin useista luotettavista lähteistä, mukaan lukien YTJ ja PRH.'
                 },
                 {
                   title: 'Älykäs kilpailija-analyysi',
-                  description: 'Ymmärrä kilpailijoita, markkinatrendejä ja liiketoimintamahdollisuuksia.'
+                  description: 'Vertaile yrityksiä ja ymmärrä markkinatrendejä suomalaisessa liiketoimintaympäristössä.'
                 }
               ].map((feature, index) => (
                 <div 
@@ -375,7 +392,7 @@ export default function CompanyResearcher() {
             <div>
               <h3 className="text-lg font-semibold mb-4">Tietoa palvelusta</h3>
               <p className="text-gray-600">
-                Yritystutkimus on tehty helpottamaan yritysten analysointia ja vertailua.
+                Yritystutkimus on suunniteltu erityisesti suomalaisten yritysten analysointiin ja vertailuun.
                 Powered by Exa.ai.
               </p>
             </div>
