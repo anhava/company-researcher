@@ -22,26 +22,37 @@ import PitchBookDisplay from './pitchbook/PitchBookDisplay';
 import TracxnDisplay from './tracxn/TracxnDisplay';
 
 export default function CompanyResearcher() {
-  const [url, setUrl] = useState('');
+  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [researchData, setResearchData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [comparisonUrl, setComparisonUrl] = useState('');
+  const [comparisonInput, setComparisonInput] = useState('');
   const [isComparing, setIsComparing] = useState(false);
 
-  // Function to validate and format URL
-  const formatUrl = (input: string): string => {
-    let formattedUrl = input.trim().toLowerCase();
+  // Function to validate and format input (URL or Business ID)
+  const formatInput = (input: string): { type: 'url' | 'businessId', value: string } => {
+    const cleanInput = input.trim().toLowerCase();
     
-    // Remove common prefixes if they exist
+    // Check if input matches Finnish Business ID format (Y-tunnus)
+    const businessIdRegex = /^(\d{7}-\d{1}|\d{8})$/;
+    if (businessIdRegex.test(cleanInput.replace(/\s/g, ''))) {
+      return {
+        type: 'businessId',
+        value: cleanInput.replace(/\s/g, '')
+      };
+    }
+    
+    // Handle URL
+    let formattedUrl = cleanInput;
     formattedUrl = formattedUrl.replace(/^(https?:\/\/)?(www\.)?/, '');
-    
-    // Add https:// prefix if not present
     if (!formattedUrl.startsWith('http')) {
       formattedUrl = 'https://' + formattedUrl;
     }
     
-    return formattedUrl;
+    return {
+      type: 'url',
+      value: formattedUrl
+    };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,21 +60,45 @@ export default function CompanyResearcher() {
     setIsLoading(true);
     setError(null);
 
-    const formattedUrl = formatUrl(url);
+    const formattedInput = formatInput(input);
 
     try {
-      // Fetch website content
+      let data: any = {};
+
+      // If input is a business ID, fetch data from Finnish sources first
+      if (formattedInput.type === 'businessId') {
+        const [prhData, ytjData, suomifiData, businessFinlandData, tilastokeskusData] = await Promise.all([
+          fetch('/api/prh', { method: 'POST', body: JSON.stringify({ businessId: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+          fetch('/api/ytj', { method: 'POST', body: JSON.stringify({ businessId: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+          fetch('/api/suomifi', { method: 'POST', body: JSON.stringify({ businessId: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+          fetch('/api/businessfinland', { method: 'POST', body: JSON.stringify({ businessId: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+          fetch('/api/tilastokeskus', { method: 'POST', body: JSON.stringify({ businessId: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json())
+        ]);
+
+        data = {
+          prh: prhData.results,
+          ytj: ytjData.results,
+          suomifi: suomifiData.results,
+          businessFinland: businessFinlandData.results,
+          tilastokeskus: tilastokeskusData.results
+        };
+
+        // Extract website URL from PRH/YTJ data if available
+        formattedInput.value = data.prh?.websites?.[0] || data.ytj?.websiteUrl || formattedInput.value;
+      }
+
+      // Continue with regular website content fetching
       const websiteContent = await fetch('/api/scrapewebsiteurl', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ websiteurl: formattedUrl })
+        body: JSON.stringify({ websiteurl: formattedInput.value })
       }).then(res => res.json());
 
       // Fetch subpages
       const subpagesContent = await fetch('/api/scrapewebsitesubpages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ websiteurl: formattedUrl })
+        body: JSON.stringify({ websiteurl: formattedInput.value })
       }).then(res => res.json());
 
       // Generate company summary
@@ -71,7 +106,7 @@ export default function CompanyResearcher() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          websiteurl: formattedUrl,
+          websiteurl: formattedInput.value,
           mainpage: websiteContent.results[0],
           subpages: subpagesContent.results[0]
         })
@@ -82,7 +117,7 @@ export default function CompanyResearcher() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          websiteurl: formattedUrl,
+          websiteurl: formattedInput.value,
           mainpage: websiteContent.results[0]
         })
       }).then(res => res.json());
@@ -93,25 +128,26 @@ export default function CompanyResearcher() {
         news, competitors, wikipedia, financials, funding, founders,
         crunchbase, pitchbook, tracxn
       ] = await Promise.all([
-        fetch('/api/scrapelinkedin', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchgithuburl', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/scrapelinkedin', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchgithuburl', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/scraperecenttweets', { method: 'POST', body: JSON.stringify({ username: websiteContent.results[0]?.twitter_username }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/scrapetwitterprofile', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchyoutubevideos', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchtiktok', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/scrapereddit', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/findnews', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/findcompetitors', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl, summaryText: summary.result }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchwikipedia', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchfinancialreport', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchfunding', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchfounders', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchcrunchbase', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchpitchbook', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/fetchtracxn', { method: 'POST', body: JSON.stringify({ websiteurl: formattedUrl }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json())
+        fetch('/api/scrapetwitterprofile', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchyoutubevideos', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchtiktok', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/scrapereddit', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/findnews', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/findcompetitors', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value, summaryText: summary.result }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchwikipedia', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchfinancialreport', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchfunding', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchfounders', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchcrunchbase', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchpitchbook', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/fetchtracxn', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json())
       ]);
 
       setResearchData({
+        ...data, // Include Finnish business data
         summary: summary.result,
         mindMap: mindMap.result,
         linkedin: linkedin.results[0],
@@ -181,8 +217,8 @@ export default function CompanyResearcher() {
             </div>
             <input
               type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Syötä yrityksen verkko-osoite tai Y-tunnus (esim. firma.fi tai 1234567-8)"
               className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl bg-white 
                        shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-default focus:border-transparent
@@ -198,8 +234,8 @@ export default function CompanyResearcher() {
               </div>
               <input
                 type="text"
-                value={comparisonUrl}
-                onChange={(e) => setComparisonUrl(e.target.value)}
+                value={comparisonInput}
+                onChange={(e) => setComparisonInput(e.target.value)}
                 placeholder="Syötä kilpailijan verkko-osoite tai Y-tunnus vertailua varten"
                 className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl bg-white 
                          shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-default focus:border-transparent
@@ -292,7 +328,7 @@ export default function CompanyResearcher() {
             {/* Wikipedia */}
             {researchData.wikipedia && (
               <section>
-                <WikipediaDisplay data={researchData.wikipedia} websiteUrl={url} />
+                <WikipediaDisplay data={researchData.wikipedia} websiteUrl={input} />
               </section>
             )}
 

@@ -26,6 +26,16 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'encrypted-tbn0.gstatic.com',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avoindata.prh.fi',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'tietopalvelu.ytj.fi',
+        pathname: '/**',
       }
     ],
   },
