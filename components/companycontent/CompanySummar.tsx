@@ -12,7 +12,6 @@ interface CompanySummaryProps {
 const CompanySummary: React.FC<CompanySummaryProps> = ({ summary }) => {
   return (
     <div className="w-full space-y-4">
-      
       <div className="bg-white border shadow-sm p-4 sm:p-8 mt-2">
         <div className="space-y-6">
           {summary.map((item, index) => (
