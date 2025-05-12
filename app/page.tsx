@@ -2,10 +2,15 @@ import CompanyResearcher from "../components/CompanyResearchHome";
 
 export default function Home() {
   return (
-    <main className="flex relative min-h-screen flex-col items-center justify-center">
+    <main className="flex relative min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#f5f8ff] to-white">
+      {/* Modern grid pattern background */}
+      <div className="absolute inset-0 grid-pattern opacity-30"></div>
 
-      {/* background grid design texture code */}
-      <div className="absolute inset-0 -z-0 w-full h-full bg-[linear-gradient(to_right,#80808012_1px,transparent_0px),linear-gradient(to_bottom,#80808012_1px,transparent_0px)] bg-[size:60px_60px]"></div>
+      {/* Floating shapes for visual interest */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-64 h-64 bg-brand-fainter rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"></div>
+        <div className="absolute bottom-20 right-20 w-64 h-64 bg-brand-faint rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style={{ animationDelay: '-1.5s' }}></div>
+      </div>
 
       <CompanyResearcher />
     </main>
