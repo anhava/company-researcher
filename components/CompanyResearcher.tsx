@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import CompanyMindMap from './mindmap/CompanyMindMap';
-import CompanySummary from './companycontent/CompanySummary';
+import CompanySummary from './companycontent/CompanySummar';
 import LinkedInDisplay from './linkedin/LinkedinDisplay';
 import GitHubDisplay from './github/GitHubDisplay';
 import TwitterProfileDisplay from './twitter/TwitterProfileDisplay';
