@@ -94,6 +94,13 @@ export default function CompanyResearcher() {
         body: JSON.stringify({ websiteurl: formattedInput.value })
       }).then(res => res.json());
 
+      // Check if websiteContent has valid results
+      if (!websiteContent?.results || !Array.isArray(websiteContent.results) || websiteContent.results.length === 0) {
+        throw new Error('Verkkosivun sisällön hakeminen epäonnistui. Tarkista syöttämäsi osoite.');
+      }
+
+      const mainPageContent = websiteContent.results[0];
+
       // Fetch subpages
       const subpagesContent = await fetch('/api/scrapewebsitesubpages', {
         method: 'POST',
@@ -101,14 +108,16 @@ export default function CompanyResearcher() {
         body: JSON.stringify({ websiteurl: formattedInput.value })
       }).then(res => res.json());
 
+      const subpages = subpagesContent?.results?.[0] || [];
+
       // Generate company summary
       const summary = await fetch('/api/companysummary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           websiteurl: formattedInput.value,
-          mainpage: websiteContent.results[0],
-          subpages: subpagesContent.results[0]
+          mainpage: mainPageContent,
+          subpages: subpages
         })
       }).then(res => res.json());
 
@@ -118,7 +127,7 @@ export default function CompanyResearcher() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           websiteurl: formattedInput.value,
-          mainpage: websiteContent.results[0]
+          mainpage: mainPageContent
         })
       }).then(res => res.json());
 
@@ -130,13 +139,13 @@ export default function CompanyResearcher() {
       ] = await Promise.all([
         fetch('/api/scrapelinkedin', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/fetchgithuburl', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/scraperecenttweets', { method: 'POST', body: JSON.stringify({ username: websiteContent.results[0]?.twitter_username }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/scraperecenttweets', { method: 'POST', body: JSON.stringify({ username: mainPageContent?.twitter_username }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/scrapetwitterprofile', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/fetchyoutubevideos', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/fetchtiktok', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/scrapereddit', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/findnews', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
-        fetch('/api/findcompetitors', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value, summaryText: summary.result }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+        fetch('/api/findcompetitors', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value, summaryText: summary?.result || '' }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/fetchwikipedia', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/fetchfinancialreport', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
         fetch('/api/fetchfunding', { method: 'POST', body: JSON.stringify({ websiteurl: formattedInput.value }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
@@ -148,27 +157,28 @@ export default function CompanyResearcher() {
 
       setResearchData({
         ...data, // Include Finnish business data
-        summary: summary.result,
-        mindMap: mindMap.result,
-        linkedin: linkedin.results[0],
-        github: github.results[0],
-        twitter: twitter.results,
-        twitterProfile: twitterProfile.results[0],
-        youtube: youtube.results,
-        tiktok: tiktok.results[0],
-        reddit: reddit.results,
-        news: news.results,
-        competitors: competitors.results,
-        wikipedia: wikipedia.results[0],
-        financials: financials.results,
-        funding: funding.results[0],
-        founders: founders.results,
-        crunchbase: crunchbase.results[0],
-        pitchbook: pitchbook.results[0],
-        tracxn: tracxn.results[0]
+        summary: summary?.result || null,
+        mindMap: mindMap?.result || null,
+        linkedin: linkedin?.results?.[0] || null,
+        github: github?.results?.[0] || null,
+        twitter: twitter?.results || [],
+        twitterProfile: twitterProfile?.results?.[0] || null,
+        youtube: youtube?.results || [],
+        tiktok: tiktok?.results?.[0] || null,
+        reddit: reddit?.results || [],
+        news: news?.results || [],
+        competitors: competitors?.results || [],
+        wikipedia: wikipedia?.results?.[0] || null,
+        financials: financials?.results || [],
+        funding: funding?.results?.[0] || null,
+        founders: founders?.results || [],
+        crunchbase: crunchbase?.results?.[0] || null,
+        pitchbook: pitchbook?.results?.[0] || null,
+        tracxn: tracxn?.results?.[0] || null
       });
     } catch (err) {
-      setError('Tietojen haku epäonnistui. Yritä uudelleen.');
+      const errorMessage = err instanceof Error ? err.message : 'Tietojen haku epäonnistui. Yritä uudelleen.';
+      setError(errorMessage);
       console.error('Research error:', err);
     } finally {
       setIsLoading(false);
